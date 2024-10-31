@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.lanshansong.Entity.user.User;
 import com.example.lanshansong.Entity.vo.FindPWVO;
 import com.example.lanshansong.Entity.vo.RegisterVO;
+import com.example.lanshansong.Entity.vo.UserVO;
+import org.springframework.scheduling.annotation.Async;
 
 /**
  * @author yourkin666
@@ -25,4 +27,9 @@ public interface UserService extends IService<User> {
      * @return
      */
     Boolean findPassword(FindPWVO findPWVO);
+
+    @Async
+    void addSearchHistory(Long userId, String search);
+
+    UserVO getInfo(Long userId);
 }

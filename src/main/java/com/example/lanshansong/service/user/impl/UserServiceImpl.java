@@ -7,14 +7,23 @@ import com.example.lanshansong.Entity.user.Favorites;
 import com.example.lanshansong.Entity.user.User;
 import com.example.lanshansong.Entity.vo.FindPWVO;
 import com.example.lanshansong.Entity.vo.RegisterVO;
+import com.example.lanshansong.Entity.vo.UserVO;
 import com.example.lanshansong.constant.RedisConstant;
 import com.example.lanshansong.exception.BaseException;
 import com.example.lanshansong.mapper.user.UserMapper;
 import com.example.lanshansong.service.user.FavoritesService;
+import com.example.lanshansong.service.user.FollowService;
 import com.example.lanshansong.service.user.UserService;
 import com.example.lanshansong.util.RedisCacheUtil;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
+
+import java.util.Date;
+
+import static com.example.lanshansong.constant.RedisConstant.USER_SEARCH_HISTORY_TIME;
 
 /**
  * @author yourkin666
@@ -27,6 +36,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private RedisCacheUtil redisCacheUtil;
     @Autowired
     private FavoritesService favoritesService;
+    @Autowired
+    private FollowService followService;
     @Override
     public boolean register(RegisterVO registerVO) throws Exception {
 
@@ -82,4 +93,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         update(user,new UpdateWrapper<User>().lambda().set(User::getPassword,findPWVO.getNewPassword()).eq(User::getEmail,findPWVO.getEmail()));
         return true;
     }
+    @Override
+    @Async
+    public void addSearchHistory(Long userId, String search) {
+        if (userId!=null){
+            redisCacheUtil.zadd(RedisConstant.USER_SEARCH_HISTORY+userId,new Date().getTime(),search,USER_SEARCH_HISTORY_TIME);
+        }
+    }
+    @Override
+    public UserVO getInfo(Long userId){
+
+        final User user = getById(userId);
+        if (ObjectUtils.isEmpty(user)){
+            return new UserVO();
+        }
+        final UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(user,userVO);
+
+        // 查出关注数量
+        final long followCount = followService.getFollowCount(userId);
+
+        // 查出粉丝数量
+        final long fansCount = followService.getFansCount(userId);
+        userVO.setFollow(followCount);
+        userVO.setFans(fansCount);
+        return userVO;
+    }
+
 }
